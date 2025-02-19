@@ -1,0 +1,121 @@
+/**
+ * Sidebar component for the application
+ * Displays navigation links and user actions
+ * Highlights the current active page
+ */
+
+"use client";
+
+import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
+import {
+  Grid2x2Check,
+  Home,
+  Users,
+  BookOpen,
+  Calendar,
+  LogOut,
+  User,
+  FileText,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import type React from "react"; // Added import for React
+
+type NavItem = {
+  icon: React.ElementType;
+  label: string;
+  href: string;
+  color: string;
+};
+
+const navItems: NavItem[] = [
+  {
+    icon: Home,
+    label: "Dashboard",
+    href: "/application/dashboard",
+    color: "bg-pastel-blue",
+  },
+  {
+    icon: Users,
+    label: "Students",
+    href: "/application/students",
+    color: "bg-pastel-yellow",
+  },
+  {
+    icon: Users,
+    label: "Teachers",
+    href: "/application/teachers",
+    color: "bg-pastel-purple",
+  },
+  // { icon: BookOpen, label: "Courses", href: "/application/courses", color: "bg-pastel-pink" },
+  {
+    icon: Calendar,
+    label: "Schedule",
+    href: "/application/schedule",
+    color: "bg-pastel-paleBlue",
+  },
+  {
+    icon: Grid2x2Check,
+    label: "Departments",
+    href: "/application/departments",
+    color: "bg-pastel-pink",
+  },
+];
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    try {
+      // Implement logout logic here (e.g., clear session, cookies, etc.)
+      router.push("/");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Optionally, show an error message to the user
+    }
+  };
+
+  return (
+    <div className="flex h-screen w-64 flex-col bg-white border-r border-gray-200">
+      <div className="flex h-16 items-center justify-center border-b border-gray-200">
+        <h1 className="text-2xl font-bold text-gray-800">EduManage Pro</h1>
+      </div>
+      <nav className="flex-1 space-y-2 p-4">
+        {navItems.map((item) => (
+          <Link key={item.href} href={item.href}>
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start text-gray-600",
+                pathname === item.href && `${item.color} text-gray-800`
+              )}
+            >
+              <item.icon className="mr-2 h-5 w-5" />
+              {item.label}
+            </Button>
+          </Link>
+        ))}
+      </nav>
+      <div className="border-t border-gray-200 p-4 flex justify-between">
+        <Button
+          variant="ghost"
+          className="justify-start text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+          onClick={() => router.push("/application/profile")}
+        >
+          <User className="mr-2 h-5 w-5" />
+          Profile
+        </Button>
+        <Button
+          variant="ghost"
+          className="justify-start text-red-500 hover:text-red-600 hover:bg-red-100"
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2 h-5 w-5" />
+          Logout
+        </Button>
+      </div>
+    </div>
+  );
+}
