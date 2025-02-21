@@ -1,25 +1,65 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { motion } from "framer-motion"
-import { User, Lock, LogIn } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import { motion } from "framer-motion";
+import { User, Lock, LogIn } from "lucide-react";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const router = useRouter()
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null); // ✅ Store login errors
+  const [loading, setLoading] = useState<boolean>(false); // ✅ Show loading state
+  const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("Logging in with:", username, password)
-    localStorage.setItem("jwtToken", "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiQURNSU4iLCJzdWIiOiJhbG91bG91QGdtYWlsLmNvbSIsImlhdCI6MTczOTg5NTcwOSwiZXhwIjoxNzM5OTgyMTA5fQ.BCrHLoP-i898mrhfQeuG8frtVRX85k8m4IY3wSGx0EI") // ✅ Store token
-    router.push("/application/dashboard")
-  }
+  /** ✅ Handles login request */
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:8080/auth/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: username, // ✅ Adjusted to "email" as per API
+          password: password,
+          role: "ADMIN"
+        }),
+      });
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.message || "Login failed");
+      }
+
+      const token = responseData.data?.token; // ✅ Extract token
+
+      if (token) {
+        localStorage.setItem("jwtToken", token); // ✅ Store token in localStorage
+        router.push("/application/dashboard"); // ✅ Redirect on success
+      } else {
+        throw new Error("Invalid response format");
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-pastel-blue to-pastel-purple">
@@ -40,11 +80,11 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <Label htmlFor="username" className="text-gray-700 flex items-center">
                   <User className="w-4 h-4 mr-2" />
-                  Username
+                  Email
                 </Label>
                 <Input
                   id="username"
-                  placeholder="Enter your username"
+                  placeholder="Enter your email"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -66,6 +106,8 @@ export default function LoginPage() {
                   className="border-pastel-blue focus:border-pastel-purple"
                 />
               </div>
+
+              {error && <p className="text-center text-red-500">{error}</p>} {/* ✅ Show error message */}
             </form>
           </CardContent>
           <CardFooter className="flex justify-center">
@@ -73,16 +115,15 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 onClick={handleLogin}
+                disabled={loading} // ✅ Disable button when loading
                 className="bg-pastel-purple hover:bg-pastel-purple/80 text-gray-800 font-semibold py-2 px-4 rounded-full transition-all duration-300 hover:shadow-md flex items-center"
               >
-                <LogIn className="w-4 h-4 mr-2" />
-                Login
+                {loading ? "Logging in..." : <><LogIn className="w-4 h-4 mr-2" /> Login</>}
               </Button>
             </motion.div>
           </CardFooter>
         </Card>
       </motion.div>
     </div>
-  )
+  );
 }
-
