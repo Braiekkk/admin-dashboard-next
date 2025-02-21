@@ -11,7 +11,7 @@ import { get } from "http";
 /** ✅ Function to retrieve JWT token */
 const getAuthToken = () => {
   //token valable 1Day
-  return "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiQURNSU4iLCJzdWIiOiJhbG91bG91QGdtYWlsLmNvbSIsImlhdCI6MTczOTg5NTcwOSwiZXhwIjoxNzM5OTgyMTA5fQ.BCrHLoP-i898mrhfQeuG8frtVRX85k8m4IY3wSGx0EI"; // Change if using cookies
+  return localStorage.getItem("jwtToken") || "" // Change if using cookies
 };
 
 /** ✅ Function to create headers with JWT */
