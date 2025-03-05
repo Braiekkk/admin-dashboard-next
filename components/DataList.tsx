@@ -69,11 +69,12 @@ export default function DataList<T extends { id: number }>({
               >
                 {Object.values(item).map((value, i) => (
                   <TableCell
-                    key={i}
-                    className="group-hover:bg-[var(--hover-color)] transition-colors duration-200"
+                  key={i}
+                  className="group-hover:bg-[var(--hover-color)] transition-colors duration-200"
                   >
-                    {value.toString()}
-                  </TableCell>
+                  {value !== undefined && value !== null ? value.toString() : 'Valeur non définie'}
+                </TableCell>
+                
                 ))}
                 <TableCell className="text-left group-hover:bg-[var(--hover-color)] transition-colors duration-200 space-x-1">
                   {displayEditDialog(item)}

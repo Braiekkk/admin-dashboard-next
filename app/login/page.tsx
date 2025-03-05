@@ -15,7 +15,7 @@ export default function LoginPage() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     console.log("Logging in with:", username, password) // ✅ Debugging log
-    localStorage.setItem("jwtToken", "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiQURNSU4iLCJzdWIiOiJhbG91bG91QGdtYWlsLmNvbSIsImlhdCI6MTczOTg5NTcwOSwiZXhwIjoxNzM5OTgyMTA5fQ.BCrHLoP-i898mrhfQeuG8frtVRX85k8m4IY3wSGx0EI") // ✅ Store token
+    localStorage.setItem("jwtToken", "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiQURNSU4iLCJzdWIiOiJmYXJlc2Fsb3Vsb3VAZ21haWwuY29tIiwiaWF0IjoxNzQwMTY1ODkxLCJleHAiOjE3NDAyNTIyOTF9.dz9SygiwU6205sSKOcMUw1yOg-OI8Sfo5Q68AqkBlBk") // ✅ Store token
     router.push("/") // ✅ Redirect to home
   }
 
@@ -23,7 +23,7 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <Card className="w-[350px]">
         <CardHeader>
-          <CardTitle>Welcome to EduManage Pro</CardTitle>
+          <CardTitle>Welcome</CardTitle>
           <CardDescription>Please log in to continue</CardDescription>
         </CardHeader>
         <CardContent>

@@ -21,6 +21,11 @@ export default function TeachersPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ✅ New states for the filter
+  const [filterType, setFilterType] = useState<"name" | "email" | "department">("name");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [isFilterPopupOpen, setIsFilterPopupOpen] = useState<boolean>(false);
+
   /** ✅ Fetch teachers from API */
   useEffect(() => {
     const fetchTeachers = async () => {
@@ -29,23 +34,23 @@ export default function TeachersPage() {
           method: "GET",
           headers: getHeaders(),
         });
-  
+
         if (!response.ok) throw new Error("Failed to fetch teachers");
-  
+
         const responseData = await response.json();
-  
+
         if (!responseData.data || !Array.isArray(responseData.data)) {
           throw new Error("Invalid response format");
         }
-  
+
         // ✅ Format teachers correctly for the frontend
         const formattedTeachers = responseData.data.map((teacher: any) => ({
-          id: teacher.id, 
+          id: teacher.id,
           name: teacher.name,
           email: teacher.email,
           department: teacher.departmentName, // ✅ Map departmentName to department
         }));
-  
+
         setTeachers(formattedTeachers);
       } catch (err) {
         setError((err as Error).message);
@@ -53,53 +58,48 @@ export default function TeachersPage() {
         setLoading(false);
       }
     };
-  
+
     fetchTeachers();
   }, []);
-  
 
-  /** ✅ Handles teacher update */
-const handleEditTeacher = async (updatedTeacher: Teacher) => {
-  try {
-    // ✅ Ensure request matches expected API format
-    const requestBody = {
-      email: updatedTeacher.email,
-      name: updatedTeacher.name,
-      departmentName: updatedTeacher.department, // ✅ Use departmentName instead of department
-    };
+   /** ✅ Handles teacher update */
+   const handleEditTeacher = async (updatedTeacher: Teacher) => {
+    try {
+      const requestBody = {
+        email: updatedTeacher.email,
+        name: updatedTeacher.name,
+        departmentName: updatedTeacher.department,
+      };
 
-    const response = await fetch(
-      `http://localhost:8080/admin/teacher/${updatedTeacher.id}`,
-      {
-        method: "PUT",
-        headers: getHeaders(),
-        body: JSON.stringify(requestBody),
-      }
-    );
+      const response = await fetch(
+        `http://localhost:8080/admin/teacher/${updatedTeacher.id}`,
+        {
+          method: "PUT",
+          headers: getHeaders(),
+          body: JSON.stringify(requestBody),
+        }
+      );
 
-    if (!response.ok) throw new Error("Failed to update teacher");
+      if (!response.ok) throw new Error("Failed to update teacher");
 
-    const responseData = await response.json();
+      const responseData = await response.json();
 
-    // ✅ Extract updated teacher data from API response
-    const updatedTeacherData = {
-      id: responseData.data.id,
-      name: responseData.data.name,
-      email: responseData.data.email,
-      department: responseData.data.departmentName, // ✅ Convert departmentName to department for frontend
-    };
+      const updatedTeacherData = {
+        id: responseData.data.id,
+        name: responseData.data.name,
+        email: responseData.data.email,
+        department: responseData.data.departmentName,
+      };
 
-    // ✅ Update state with the correct structure
-    setTeachers((prev) =>
-      prev.map((teacher) =>
-        teacher.id === updatedTeacher.id ? updatedTeacherData : teacher
-      )
-    );
-  } catch (error) {
-    console.error("Error updating teacher:", error);
-  }
-};
-
+      setTeachers((prev) =>
+        prev.map((teacher) =>
+          teacher.id === updatedTeacher.id ? updatedTeacherData : teacher
+        )
+      );
+    } catch (error) {
+      console.error("Error updating teacher:", error);
+    }
+  };
 
   /** ✅ Handles teacher deletion */
   const handleDeleteTeacher = async (teacherToDelete: Teacher) => {
@@ -125,39 +125,40 @@ const handleEditTeacher = async (updatedTeacher: Teacher) => {
   /** ✅ Handles new teacher addition */
   const handleAddTeacher = async (newTeacher: Omit<Teacher, "id">) => {
     try {
-      // ✅ Ensure request matches expected API format
       const requestBody = {
         email: newTeacher.email,
         name: newTeacher.name,
-        password: "teacher", // ✅ Static password for now
-        departmentName: newTeacher.department, // ✅ Ensure department is sent as departmentName
+        password: "teacher",
+        departmentName: newTeacher.department,
       };
-  
+
       const response = await fetch("http://localhost:8080/admin/teacher", {
         method: "POST",
         headers: getHeaders(),
         body: JSON.stringify(requestBody),
       });
-  
+
       if (!response.ok) throw new Error("Failed to add teacher");
-  
+
       const responseData = await response.json();
-  
-      // ✅ Extract teacher data from API response
+
       const createdTeacher: Teacher = {
         id: responseData.data.id,
         name: responseData.data.name,
         email: responseData.data.email,
-        department: responseData.data.departmentName, // ✅ Convert departmentName to department for frontend
+        department: responseData.data.departmentName,
       };
-  
-      // ✅ Update state with the correct structure
+
       setTeachers((prev) => [...prev, createdTeacher]);
     } catch (error) {
       console.error("Error adding teacher:", error);
     }
   };
-  
+
+  /** ✅ Handle filtering of teachers */
+  const filteredTeachers = teachers.filter((teacher) => {
+    return teacher[filterType].toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   if (loading)
     return <p className="text-center text-gray-500">Loading teachers...</p>;
@@ -166,23 +167,62 @@ const handleEditTeacher = async (updatedTeacher: Teacher) => {
   return (
     <div className="space-y-4">
       <h1 className="text-3xl font-bold tracking-tight">Teachers</h1>
+
+      {/* ✅ Filter input & button */}
+      <div className="space-y-2">
+        <button
+          className="px-4 py-2 bg-blue-600 text-white rounded-md"
+          onClick={() => setIsFilterPopupOpen(true)}
+        >
+          Choose a filter
+        </button>
+
+        <input
+          type="text"
+          className="p-3 border w-full"
+          placeholder={`Search by ${filterType}`}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      {/* ✅ List of filtered teachers */}
       <DataList
-        data={teachers}
+        data={filteredTeachers}
         headers={["ID", "Name", "Email", "Department Name"]}
-        /** ✅ Pass Edit Dialog */
         displayEditDialog={(teacher) => (
           <EditTeacherPopup teacher={teacher} onSave={handleEditTeacher} />
         )}
-        /** ✅ Pass Delete Dialog */
         displayDeleteDialog={(teacher) => (
-          <DeleteConfirmationPopup
-            item={teacher}
-            onDelete={handleDeleteTeacher}
-          />
+          <DeleteConfirmationPopup item={teacher} onDelete={handleDeleteTeacher} />
         )}
-        /** ✅ Pass Add Dialog */
         displayAddDialog={() => <AddTeacherPopup onAdd={handleAddTeacher} />}
       />
+
+      {/* ✅ Filter selection popup */}
+      {isFilterPopupOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h2 className="text-lg font-bold mb-4">Filter by</h2>
+            <div className="space-y-2">
+              {["name", "email", "department"].map((type) => (
+                <button
+                  key={type}
+                  className={`block w-52 p-3 text-left text-base font-medium rounded-md ${
+                    filterType === type ? "bg-blue-600 text-white" : "bg-gray-200"
+                  }`}
+                  onClick={() => {
+                    setFilterType(type as "name" | "email" | "department");
+                    setIsFilterPopupOpen(false);
+                  }}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
