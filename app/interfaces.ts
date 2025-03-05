@@ -42,3 +42,20 @@ export interface Room {
   location: string;
   exams?: Exam[];
 }
+
+export interface Period {
+  id: string
+  title: "DS_S1" | "Examen_S1" | "DS_S2" | "Examen_S2" | "Control_S1" | "Control_S2"
+  year: string
+  startPeriod: Date
+  endPeriod: Date
+}
+
+export interface CalendarEvent {
+  id?: number
+  title: string
+  start: Date
+  end: Date
+  resourceId?: number
+  duration?: number
+}
