@@ -1,9 +1,3 @@
-/**
- * Sidebar component for the application
- * Displays navigation links and user actions
- * Highlights the current active page
- */
-
 "use client";
 
 import Link from "next/link";
@@ -20,7 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import type React from "react"; // Added import for React
+import type React from "react"; // Ajout de l'import pour React
 
 type NavItem = {
   icon: React.ElementType;
@@ -48,7 +42,6 @@ const navItems: NavItem[] = [
     href: "/application/teachers",
     color: "bg-pastel-purple",
   },
-  // { icon: BookOpen, label: "Courses", href: "/application/courses", color: "bg-pastel-pink" },
   {
     icon: Calendar,
     label: "Schedule",
@@ -61,6 +54,18 @@ const navItems: NavItem[] = [
     href: "/application/departments",
     color: "bg-pastel-pink",
   },
+  {
+    icon: FileText,
+    label: "Grades",
+    href: "/application/niveaux",
+    color: "bg-pastel-green",
+  },
+  {
+    icon: BookOpen,
+    label: "Rooms",
+    href: "/application/rooms",
+    color: "bg-pastel-orange", // Vous pouvez changer la couleur
+  },
 ];
 
 export default function Sidebar() {
@@ -69,11 +74,9 @@ export default function Sidebar() {
 
   const handleLogout = () => {
     try {
-      // Implement logout logic here (e.g., clear session, cookies, etc.)
       router.push("/");
     } catch (error) {
       console.error("Logout failed:", error);
-      // Optionally, show an error message to the user
     }
   };
 

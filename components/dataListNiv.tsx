@@ -10,13 +10,13 @@ import {
 } from "@/components/ui/table";
 import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { Department } from "@/app/interfaces"; // Ensure this imports your interface
+import { Niveau } from "@/app/interfaces"; // Assurez-vous d'importer votre interface Niveau
 
-interface DepartmentDataListProps {
-  data: Department[];
+interface NiveauDataListProps {
+  data: Niveau[]; // Modifié pour les niveaux
   headers: string[];
-  displayEditDialog: (item: Department) => JSX.Element;
-  displayDeleteDialog: (item: Department) => JSX.Element;
+  displayEditDialog: (item: Niveau) => JSX.Element;
+  displayDeleteDialog: (item: Niveau) => JSX.Element;
   displayAddDialog: () => JSX.Element;
 }
 
@@ -28,13 +28,13 @@ const pastelColors = [
   "rgba(223, 246, 255, 0.6)", // Pale Blue
 ];
 
-export default function DepartmentDataList({
+export default function NiveauDataList({
   data,
   headers,
   displayEditDialog,
   displayDeleteDialog,
   displayAddDialog,
-}: DepartmentDataListProps) {
+}: NiveauDataListProps) {
   const [expandedRows, setExpandedRows] = useState<number[]>([]);
 
   const toggleExpandRow = (id: number) => {
@@ -65,36 +65,36 @@ export default function DepartmentDataList({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((department, index) => {
+            {data.map((niveau, index) => {
               const hoverColor = pastelColors[index % pastelColors.length];
 
               return (
                 <>
-                  {/* Department Row */}
+                  {/* Niveau Row */}
                   <motion.tr
-                    key={department.id}
+                    key={niveau.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3, delay: index * 0.1 }}
                     className="group transition-colors duration-150 hover:bg-[var(--hover-color)]"
                     style={{ "--hover-color": hoverColor } as React.CSSProperties}
                   >
-                    <TableCell className="font-semibold">{department.id}</TableCell>
-                    <TableCell>{department.name}</TableCell>
-                    <TableCell className="text-left">{displayEditDialog(department)} {displayDeleteDialog(department)}</TableCell>
+                    <TableCell className="font-semibold">{niveau.id}</TableCell>
+                    <TableCell>{niveau.name}</TableCell>
+                    <TableCell className="text-left">{displayEditDialog(niveau)} {displayDeleteDialog(niveau)}</TableCell>
                     <TableCell className="text-left">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => toggleExpandRow(department.id)}
+                        onClick={() => toggleExpandRow(niveau.id)}
                       >
-                        {expandedRows.includes(department.id) ? <ChevronUp /> : <ChevronDown />}
+                        {expandedRows.includes(niveau.id) ? <ChevronUp /> : <ChevronDown />}
                       </Button>
                     </TableCell>
                   </motion.tr>
 
-                  {/* Expanded Teacher Section with Matching Border Color */}
-                  {expandedRows.includes(department.id) && department.teachers.length > 0 && (
+                  {/* Expanded Student Section with Matching Border Color */}
+                  {expandedRows.includes(niveau.id) && niveau.students?.length > 0 && (
                     <tr>
                       <TableCell colSpan={5} className="p-4">
                         <div
@@ -105,34 +105,36 @@ export default function DepartmentDataList({
                             backgroundColor: "rgba(255, 255, 255)",
                           }}
                         >
-                          <h3 className="font-semibold text-gray-700">Teachers</h3>
+                          <h3 className="font-semibold text-gray-700">Students</h3>
                           <Table className="mt-2 border border-gray-200 rounded-md shadow-sm">
                             <TableHeader>
                               <TableRow style={{ borderColor: hoverColor }}>
-                                <TableHead className="text-left w-1/4">Teacher ID</TableHead>
+                                <TableHead className="text-left w-1/4">Student ID</TableHead>
                                 <TableHead className="text-left w-1/4">Name</TableHead>
                                 <TableHead className="text-left w-1/4">Email</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {department.teachers.map((teacher, teacherIndex) => (
-                                <motion.tr
-                                  key={teacher.id}
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ duration: 0.3, delay: teacherIndex * 0.05 }}
-                                  className="transition-colors duration-150 hover:bg-[var(--hover-color)]"
-                                  style={{
-                                    "--hover-color": hoverColor,
-                                    borderBottom: `1px solid ${hoverColor}`,
-                                  } as React.CSSProperties}
-                                >
-                                  <TableCell>{teacher.id}</TableCell>
-                                  <TableCell>{teacher.name}</TableCell>
-                                  <TableCell>{teacher.email}</TableCell>
-                                </motion.tr>
-                              ))}
-                            </TableBody>
+                                    {niveau.students.map((student, studentIndex) => (
+                                        <motion.tr
+                                        key={`${student.id}`} // Combine niveau_id and student.id for a unique key
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3, delay: studentIndex * 0.05 }}
+                                        className="transition-colors duration-150 hover:bg-[var(--hover-color)]"
+                                        style={{
+                                            "--hover-color": hoverColor,
+                                            borderBottom: `1px solid ${hoverColor}`,
+                                        } as React.CSSProperties}
+                                        >
+                                        <TableCell>{student.id}</TableCell>
+                                        <TableCell>{student.name}</TableCell>
+                                        <TableCell>{student.email}</TableCell>
+                                        </motion.tr>
+                                    ))}
+                                    </TableBody>
+
+
                           </Table>
                         </div>
                       </TableCell>

@@ -13,16 +13,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Pencil } from "lucide-react";
-import { Department } from "@/app/interfaces";
+import { Niveau } from "@/app/interfaces";
 
-interface EditDepartmentPopupProps {
-  department: Department;
-  onSave: (updatedDepartment: Department) => void;
+interface EditNiveauPopupProps {
+  niveau: Niveau;
+  onSave: (updatedNiveau: Niveau) => void;
 }
 
-export function EditDepartmentPopup({ department, onSave }: EditDepartmentPopupProps) {
-  // On stocke seulement le nouveau nom
-  const [updatedName, setUpdatedName] = useState(department.name);
+export function EditNiveauPopup({ niveau, onSave }: EditNiveauPopupProps) {
+  const [updatedName, setUpdatedName] = useState(niveau.name);
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -39,14 +38,13 @@ export function EditDepartmentPopup({ department, onSave }: EditDepartmentPopupP
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Department</DialogTitle>
+          <DialogTitle>Edit Niveau</DialogTitle>
         </DialogHeader>
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            // Créer un nouvel objet Department en fusionnant l'objet original avec le nom mis à jour
-            onSave({ ...department, name: updatedName });
-            setIsOpen(false); // Ferme le dialogue après la sauvegarde
+            onSave({ ...niveau, name: updatedName });
+            setIsOpen(false);
           }}
         >
           <div className="grid gap-4 py-4">
@@ -54,7 +52,6 @@ export function EditDepartmentPopup({ department, onSave }: EditDepartmentPopupP
               <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
-                name="name"
                 value={updatedName}
                 onChange={(e) => setUpdatedName(e.target.value)}
                 className="col-span-3"

@@ -1,8 +1,10 @@
 export interface Student {
+  /*niveauId: any;*/
   id: number
   name: string
   email: string
   grade: string
+  /*idNiveau: number;*/
 }
 
 export interface Teacher {
@@ -17,16 +19,26 @@ export interface Exam {
   subject: string
   date: string
   duration: number
+  room : string
+  supervisors : Teacher[]
 }
 
 export interface Department {
   id:number
   name: string
-  description: string
   teachers : Teacher[]
 }
 
 export interface Niveau {
-  id: string;
+  id: number;
   name: string;
+  students : Student[]
+}
+
+export interface Room {
+  id: number;
+  name: string;
+  capacity: number;
+  location: string;
+  exams?: Exam[];
 }
