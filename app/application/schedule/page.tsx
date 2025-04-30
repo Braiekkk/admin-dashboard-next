@@ -42,7 +42,7 @@ const Page = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const response = await fetch("http://localhost:3000/admin/exams");
+        const response = await fetch("http://localhost:8080/admin/exams");
         if (!response.ok) {
           throw new Error("Failed to fetch events");
         }
