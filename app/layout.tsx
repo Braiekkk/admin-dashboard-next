@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
-  title: "EduManage Pro",
+  title: "Exams Management System",
   description: "Advanced Educational Management System",
     generator: 'v0.dev'
 }

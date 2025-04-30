@@ -15,12 +15,18 @@ export interface Teacher {
 }
 
 export interface Exam {
+  exam: any
+  period: any
+  //room_id: number
+  room_id: any
   id: number
   subject: string
   date: string
   duration: number
   room : string
   supervisors : Teacher[]
+  niveau_id: any
+  niveau : string
 }
 
 export interface Department {
@@ -58,4 +64,12 @@ export interface CalendarEvent {
   end: Date
   resourceId?: number
   duration?: number
+}
+
+export interface Assignment {
+  id: string
+  examId: string
+  supervisorId: string
+  status: "assigned" | "pending" | "confirmed"
+  notified: boolean
 }

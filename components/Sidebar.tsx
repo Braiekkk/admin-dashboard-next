@@ -11,10 +11,12 @@ import {
   LogOut,
   User,
   FileText,
+  ClipboardCheck,
+  ClipboardList, // Icône pour Exam Management
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import type React from "react"; // Ajout de l'import pour React
+import type React from "react";
 
 type NavItem = {
   icon: React.ElementType;
@@ -64,7 +66,19 @@ const navItems: NavItem[] = [
     icon: BookOpen,
     label: "Rooms",
     href: "/application/rooms",
-    color: "bg-pastel-orange", // Vous pouvez changer la couleur
+    color: "bg-pastel-orange",
+  },
+  {
+    icon: ClipboardCheck, // Nouvel élément pour Exam Management
+    label: "Exam Management",
+    href: "/application/RoomManagment", // Même URL que Rooms puisque ça doit accéder à RoomManagement
+    color: "bg-pastel-red", // Vous pouvez choisir une autre couleur
+  },
+  {
+    icon: ClipboardList, // Nouvelle icône pour Supervisor Assignment
+    label: "Supervisor Assignment",
+    href: "/application/supervisor-assignment",
+    color: "bg-pastel-teal",
   },
 ];
 
@@ -87,7 +101,7 @@ export default function Sidebar() {
       </div>
       <nav className="flex-1 space-y-2 p-4">
         {navItems.map((item) => (
-          <Link key={item.href} href={item.href}>
+          <Link key={item.href + item.label} href={item.href}>
             <Button
               variant="ghost"
               className={cn(
