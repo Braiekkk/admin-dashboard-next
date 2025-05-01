@@ -40,6 +40,7 @@ interface AddStudentPopupProps {
     name: string;
     email: string;
     grade: string;
+    td: string; 
   }) => void;
 }
 
@@ -48,6 +49,7 @@ export function AddStudentPopup({ onAdd }: AddStudentPopupProps) {
     name: "",
     email: "",
     grade: "",
+    td: "", // <-- Add td field
   });
 
   const [isOpen, setIsOpen] = useState(false);
@@ -83,7 +85,7 @@ export function AddStudentPopup({ onAdd }: AddStudentPopupProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd(newStudent);
+    onAdd(newStudent); // newStudent now includes td
     setIsOpen(false);
   };
 
@@ -91,7 +93,7 @@ export function AddStudentPopup({ onAdd }: AddStudentPopupProps) {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
-          className="bg-pastel-blue hover:bg-pastel-blue/90 text-gray-800 rounded-full transition-all duration-300 hover:scale-105 hover:shadow-lg"
+          className="bg-pastel-yellow hover:bg-pastel-yellow/90 text-gray-800 rounded-full transition-all duration-300 hover:scale-105 hover:shadow-lg"
           onClick={() => setIsOpen(true)}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -166,6 +168,26 @@ export function AddStudentPopup({ onAdd }: AddStudentPopupProps) {
             </Select>
           </div>
 
+          {/* ✅ TD (Dropdown for 1 or 2) */}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="td" className="text-right">
+              TD
+            </Label>
+            <Select
+              value={newStudent.td}
+              onValueChange={(value) =>
+                setNewStudent((prev) => ({ ...prev, td: value }))
+              }
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select TD" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1</SelectItem>
+                <SelectItem value="2">2</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           {/* ✅ Buttons */}
           <DialogFooter className="flex justify-between">
             <Button variant="outline" onClick={() => setIsOpen(false)}>

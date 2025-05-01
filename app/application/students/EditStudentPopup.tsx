@@ -39,7 +39,10 @@ interface EditStudentPopupProps {
 }
 
 export function EditStudentPopup({ student, onSave }: EditStudentPopupProps) {
-  const [updatedStudent, setUpdatedStudent] = useState(student);
+  const [updatedStudent, setUpdatedStudent] = useState({
+    ...student,
+    td: (student as any).td || "", // Add td field, fallback to empty string if not present
+  });
   const [isOpen, setIsOpen] = useState(false);
   const [niveauList, setNiveauList] = useState<Niveau[]>([]); // ✅ Stores grades (niveau)
 
@@ -160,6 +163,30 @@ export function EditStudentPopup({ student, onSave }: EditStudentPopupProps) {
                       </SelectItem>
                     ))
                   )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* ✅ TD (Dropdown for 1 or 2) */}
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="td">TD</Label>
+              <Select
+                value={updatedStudent.td}
+                onValueChange={(value) =>
+                  setUpdatedStudent((prev) => ({
+                    ...prev,
+                    td: value,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select TD">
+                    {updatedStudent.td || "Select TD"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">1</SelectItem>
+                  <SelectItem value="2">2</SelectItem>
                 </SelectContent>
               </Select>
             </div>

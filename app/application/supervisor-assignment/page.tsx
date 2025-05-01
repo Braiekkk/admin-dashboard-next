@@ -76,6 +76,14 @@ interface Room {
   location: string
 }
 
+const pastelColors = [
+  "rgba(227, 247, 255)",
+  "rgba(254, 243, 199)",
+  "rgba(236, 234, 254)",
+  "rgba(253, 226, 243)",
+  "rgba(223, 246, 255)",
+]
+
 export default function SupervisorAssignmentPage() {
   // State for exams and teachers
   const [exams, setExams] = useState<Exam[]>([])
@@ -84,12 +92,18 @@ export default function SupervisorAssignmentPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterDepartment, setFilterDepartment] = useState<string>("all")
   const [filterPeriod, setFilterPeriod] = useState<string>("all")
+  const [filterYear, setFilterYear] = useState<string>("all") // NEW: year filter state
   const [autoAssignSuccess, setAutoAssignSuccess] = useState(false)
   const [replacementModalOpen, setReplacementModalOpen] = useState(false)
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null)
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null)
   const [teacherToReplace, setTeacherToReplace] = useState<Teacher | null>(null)
   const [notificationSent, setNotificationSent] = useState(false)
+  const [availableTeachers, setAvailableTeachers] = useState<Teacher[]>([])
+  const [addSupervisorDialogExamId, setAddSupervisorDialogExamId] = useState<number | null>(null)
+  const [addSupervisorSearch, setAddSupervisorSearch] = useState("")
+  const [replaceSupervisorSearch, setReplaceSupervisorSearch] = useState("")
+  const [replaceSupervisorDepartment, setReplaceSupervisorDepartment] = useState<string>("all") // NEW: department filter for replace dialog
 
   // Update the fetchData function in useEffect to use the correct endpoints
   useEffect(() => {
@@ -220,18 +234,23 @@ export default function SupervisorAssignmentPage() {
 
   // Function to get unique departments for filtering
   const departments = [...new Set(teachers.map((teacher) => teacher.departmentName))]
-
+  const CURRENT_YEAR = new Date().getFullYear();
+  const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => {
+    const year = CURRENT_YEAR - 2 + i;
+    return `${year}-${year + 1}`;
+  });
   // Function to get unique periods for filtering
-  const periods = [...new Set(exams.map((exam) => exam.period))]
+  const periods = ["DS_S1", "DS_S2", "Examen_S1", "Examen_S2"] ;
 
-  // Filter exams based on search term and period
+  // Filter exams based on search term and period and year
   const filteredExams = exams.filter((exam) => {
     const matchesSearch = searchTerm
       ? exam.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (exam.niveauName && exam.niveauName.toLowerCase().includes(searchTerm.toLowerCase()))
       : true
     const matchesPeriod = filterPeriod !== "all" ? exam.period === filterPeriod : true
-    return matchesSearch && matchesPeriod
+    const matchesYear = filterYear !== "all" ? exam.academicYear === filterYear : true // NEW: year filter
+    return matchesSearch && matchesPeriod && matchesYear
   })
 
   // Filter teachers based on department
@@ -587,7 +606,33 @@ export default function SupervisorAssignmentPage() {
   }
 
   function openReplacementDialog(exam: Exam, supervisor: Teacher): void {
-    throw new Error("Function not implemented.")
+    setSelectedExam(exam)
+    setTeacherToReplace(supervisor)
+    setReplacementModalOpen(true)
+    setSelectedTeacher(null)
+    setReplaceSupervisorSearch("")
+    setReplaceSupervisorDepartment("all") // reset department filter
+    fetchAvailableTeachers(exam)
+  }
+
+  // Fetch available teachers for a given exam start time
+  const fetchAvailableTeachers = async (exam: Exam) => {
+    try {
+      const dateTime = exam.startDate.slice(0, 16) // "yyyy-MM-ddTHH:mm"
+      const response = await fetch(
+        `http://localhost:8080/admin/teacher/available?dateTime=${encodeURIComponent(dateTime)}`,
+        {
+          method: "GET",
+          headers: getHeaders(),
+        }
+      )
+      if (!response.ok) throw new Error("Failed to fetch available teachers")
+      const data = await response.json()
+      setAvailableTeachers(Array.isArray(data.data) ? data.data : [])
+    } catch (err) {
+      setAvailableTeachers([]
+      )
+    }
   }
 
   return (
@@ -660,6 +705,20 @@ export default function SupervisorAssignmentPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {/* NEW: Year select */}
+                <Select value={filterYear} onValueChange={setFilterYear}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All years</SelectItem>
+                    {YEAR_OPTIONS.map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardHeader>
             <CardContent>
@@ -689,8 +748,22 @@ export default function SupervisorAssignmentPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredExams.map((exam) => (
-                          <TableRow key={exam.id}>
+                        filteredExams.map((exam, index) => (
+                          <TableRow
+                            key={exam.id}
+                            className="group transition-colors duration-150"
+                            style={
+                              {
+                                "--hover-color": pastelColors[index % pastelColors.length],
+                              } as React.CSSProperties
+                            }
+                            onMouseEnter={e => {
+                              (e.currentTarget as HTMLElement).style.backgroundColor = "var(--hover-color)";
+                            }}
+                            onMouseLeave={e => {
+                              (e.currentTarget as HTMLElement).style.backgroundColor = "";
+                            }}
+                          >
                             <TableCell className="font-medium">{exam.subject}</TableCell>
                             <TableCell>
                               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
@@ -739,7 +812,16 @@ export default function SupervisorAssignmentPage() {
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Dialog>
+                              <Dialog
+                                open={addSupervisorDialogExamId === exam.id}
+                                onOpenChange={(open) => {
+                                  setAddSupervisorDialogExamId(open ? exam.id : null)
+                                  setAddSupervisorSearch("") // reset search on open/close
+                                  if (open) fetchAvailableTeachers(exam)
+                                  else setAvailableTeachers([])
+                                }}
+                              >
+                                {/* dialog for selecting a supervisor */}
                                 <DialogTrigger asChild>
                                   <Button variant="outline" size="sm" disabled={getSupervisorCount(exam) >= 2}>
                                     <UserPlus className="mr-2 h-3 w-3" />
@@ -754,6 +836,15 @@ export default function SupervisorAssignmentPage() {
                                     </DialogDescription>
                                   </DialogHeader>
                                   <div className="py-4">
+                                    {/* NEW: Search field */}
+                                    <div className="mb-2">
+                                      <Input
+                                        placeholder="Search for a teacher..."
+                                        value={addSupervisorSearch}
+                                        onChange={e => setAddSupervisorSearch(e.target.value)}
+                                        className="pl-8"
+                                      />
+                                    </div>
                                     <div className="mb-4">
                                       <Select onValueChange={setFilterDepartment} value={filterDepartment}>
                                         <SelectTrigger>
@@ -770,50 +861,75 @@ export default function SupervisorAssignmentPage() {
                                       </Select>
                                     </div>
                                     <div className="max-h-[300px] overflow-y-auto space-y-2">
-                                      {filteredTeachers.map((teacher) => {
-                                        const isAssigned =
-                                          exam.supervisors && exam.supervisors.some((s) => s.id === teacher.id)
-                                        const canAssign = canSupervise(teacher, exam)
-                                        const isAvailable = isTeacherAvailable(teacher, exam)
-
-                                        return (
-                                          <div
-                                            key={teacher.id}
-                                            className={`flex items-center justify-between p-3 rounded-md border ${
-                                              isAssigned
-                                                ? "bg-green-50 border-green-200"
-                                                : !canAssign
-                                                  ? "bg-red-50 border-red-200"
-                                                  : !isAvailable
-                                                    ? "bg-amber-50 border-amber-200"
-                                                    : "bg-white"
-                                            }`}
-                                          >
-                                            <div>
-                                              <div className="font-medium">{teacher.name}</div>
-                                              <div className="text-sm text-muted-foreground">
-                                                {teacher.departmentName}
-                                              </div>
-                                            </div>
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              disabled={isAssigned || !canAssign || !isAvailable}
-                                              onClick={() => assignTeacher(exam, teacher)}
-                                            >
-                                              {isAssigned ? (
-                                                <CheckCircle className="h-4 w-4 text-green-500" />
-                                              ) : (
-                                                "Assign"
-                                              )}
-                                            </Button>
-                                          </div>
+                                      {availableTeachers
+                                        .filter((teacher) =>
+                                          filterDepartment === "all"
+                                            ? true
+                                            : teacher.departmentName === filterDepartment
                                         )
-                                      })}
+                                        .filter((teacher) =>
+                                          addSupervisorSearch.trim() === ""
+                                            ? true
+                                            : teacher.name.toLowerCase().includes(addSupervisorSearch.toLowerCase()) ||
+                                              teacher.email.toLowerCase().includes(addSupervisorSearch.toLowerCase())
+                                        )
+                                        .map((teacher) => {
+                                          const isAssigned =
+                                            exam.supervisors && exam.supervisors.some((s) => s.id === teacher.id)
+                                          const canAssign = canSupervise(teacher, exam)
+                                          // isAvailable is always true here, since API already filtered
+                                          return (
+                                            <div
+                                              key={teacher.id}
+                                              className={`flex items-center justify-between p-3 rounded-md border ${
+                                                isAssigned
+                                                  ? "bg-green-50 border-green-200"
+                                                  : !canAssign
+                                                    ? "bg-red-50 border-red-200"
+                                                    : "bg-white"
+                                              }`}
+                                            >
+                                              <div>
+                                                <div className="font-medium">{teacher.name}</div>
+                                                <div className="text-sm text-muted-foreground">
+                                                  {teacher.departmentName}
+                                                </div>
+                                              </div>
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={isAssigned || !canAssign}
+                                                onClick={() => assignTeacher(exam, teacher)}
+                                              >
+                                                {isAssigned ? (
+                                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                                ) : (
+                                                  "Assign"
+                                                )}
+                                              </Button>
+                                            </div>
+                                          )
+                                        })}
+                                      {availableTeachers
+                                        .filter((teacher) =>
+                                          filterDepartment === "all"
+                                            ? true
+                                            : teacher.departmentName === filterDepartment
+                                        )
+                                        .filter((teacher) =>
+                                          addSupervisorSearch.trim() === ""
+                                            ? true
+                                            : teacher.name.toLowerCase().includes(addSupervisorSearch.toLowerCase()) ||
+                                              teacher.email.toLowerCase().includes(addSupervisorSearch.toLowerCase())
+                                        ).length === 0 && (
+                                        <div className="text-center text-muted-foreground py-4">
+                                          No available teachers for this time.
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                   <DialogFooter>
-                                    <Button variant="outline" onClick={() => {}}>
+                                    <Button variant="outline" onClick={() => setAddSupervisorDialogExamId(null)}>
                                       Cancel
                                     </Button>
                                   </DialogFooter>
@@ -858,6 +974,32 @@ export default function SupervisorAssignmentPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All periods</SelectItem>
+                    {periods.map((period) => (
+                      <SelectItem key={period} value={period}>
+                        {period}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filterYear} onValueChange={setFilterYear}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All years</SelectItem>
+                    {YEAR_OPTIONS.map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </CardHeader>
             <CardContent>
@@ -867,42 +1009,72 @@ export default function SupervisorAssignmentPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredTeachers.map((teacher) => {
-                    // Count how many exams this teacher is supervising
-                    const assignedExams = exams.filter(
-                      (exam) => exam.supervisors && exam.supervisors.some((s) => s.id === teacher.id),
+                  {teachers
+                    .filter((teacher) =>
+                      filterDepartment === "all"
+                        ? true
+                        : teacher.departmentName === filterDepartment
                     )
+                    .filter((teacher) =>
+                      searchTerm.trim() === ""
+                        ? true
+                        : teacher.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          teacher.email.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map((teacher, index) => {
+                      // Filter assigned exams for this teacher based on year and period
+                      const assignedExams = exams.filter(
+                        (exam) =>
+                          exam.supervisors &&
+                          exam.supervisors.some((s) => s.id === teacher.id) &&
+                          (filterPeriod === "all" || exam.period === filterPeriod) &&
+                          (filterYear === "all" || exam.academicYear === filterYear)
+                      );
 
-                    return (
-                      <Card key={teacher.id} className="overflow-hidden">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">{teacher.name}</CardTitle>
-                          <CardDescription>{teacher.email}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge>{teacher.departmentName}</Badge>
-                            <Badge variant="outline">
-                              {assignedExams.length} supervision{assignedExams.length !== 1 ? "s" : ""}
-                            </Badge>
-                          </div>
-
-                          {assignedExams.length > 0 && (
-                            <div className="mt-4">
-                              <h4 className="text-sm font-medium mb-2">Assigned exams:</h4>
-                              <ul className="space-y-1">
-                                {assignedExams.map((exam) => (
-                                  <li key={exam.id} className="text-sm">
-                                    <span className="font-medium">{exam.subject}</span> - {formatDate(exam.startDate)}
-                                  </li>
-                                ))}
-                              </ul>
+                      return (
+                        <div
+                          key={teacher.id}
+                          className="overflow-hidden rounded-lg transition-colors duration-150 border border-gray-200"
+                          style={
+                            {
+                              "--hover-color": pastelColors[index % pastelColors.length],
+                            } as React.CSSProperties
+                          }
+                          onMouseEnter={e => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = "var(--hover-color)";
+                          }}
+                          onMouseLeave={e => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = "";
+                          }}
+                        >
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-lg">{teacher.name}</CardTitle>
+                            <CardDescription>{teacher.email}</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge>{teacher.departmentName}</Badge>
+                              <Badge variant="outline">
+                                {assignedExams.length} supervision{assignedExams.length !== 1 ? "s" : ""}
+                              </Badge>
                             </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
+
+                            {assignedExams.length > 0 && (
+                              <div className="mt-4">
+                                <h4 className="text-sm font-medium mb-2">Assigned exams:</h4>
+                                <ul className="space-y-1">
+                                  {assignedExams.map((exam) => (
+                                    <li key={exam.id} className="text-sm">
+                                      <span className="font-medium">{exam.subject}</span> - {formatDate(exam.startDate)}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </CardContent>
+                        </div>
+                      )
+                    })}
                 </div>
               )}
             </CardContent>
@@ -911,7 +1083,12 @@ export default function SupervisorAssignmentPage() {
       </Tabs>
 
       {/* Replacement Dialog */}
-      <Dialog open={replacementModalOpen} onOpenChange={setReplacementModalOpen}>
+      <Dialog open={replacementModalOpen} onOpenChange={(open) => {
+        setReplacementModalOpen(open)
+        setReplaceSupervisorSearch("")
+        setReplaceSupervisorDepartment("all")
+        if (!open) setAvailableTeachers([])
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Replace Supervisor</DialogTitle>
@@ -920,40 +1097,96 @@ export default function SupervisorAssignmentPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <Select
-              onValueChange={(value) => {
-                const teacher = teachers.find((t) => t.id === Number.parseInt(value))
-                setSelectedTeacher(teacher || null)
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a replacement" />
-              </SelectTrigger>
-              <SelectContent>
-                {teachers
-                  .filter(
-                    (teacher) =>
-                      // Not the teacher being replaced
-                      teacherToReplace &&
-                      teacher.id !== teacherToReplace.id &&
-                      // Not already assigned to this exam
-                      selectedExam &&
-                      selectedExam.supervisors &&
-                      !selectedExam.supervisors.some((s) => s.id === teacher.id) &&
-                      // Can supervise this exam
-                      selectedExam &&
-                      canSupervise(teacher, selectedExam) &&
-                      // Is available at this time
-                      selectedExam &&
-                      isTeacherAvailable(teacher, selectedExam),
-                  )
-                  .map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id.toString()}>
-                      {teacher.name} ({teacher.departmentName})
+            {/* Search field */}
+            <div className="mb-2">
+              <Input
+                placeholder="Search for a teacher..."
+                value={replaceSupervisorSearch}
+                onChange={e => setReplaceSupervisorSearch(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            {/* NEW: Department filter */}
+            <div className="mb-4">
+              <Select onValueChange={setReplaceSupervisorDepartment} value={replaceSupervisorDepartment}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by department" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All departments</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
                     </SelectItem>
                   ))}
-              </SelectContent>
-            </Select>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto space-y-2">
+              {availableTeachers
+                .filter((teacher) =>
+                  teacherToReplace &&
+                  teacher.id !== teacherToReplace.id &&
+                  selectedExam &&
+                  selectedExam.supervisors &&
+                  !selectedExam.supervisors.some((s) => s.id === teacher.id) &&
+                  selectedExam &&
+                  canSupervise(teacher, selectedExam) &&
+                  (replaceSupervisorDepartment === "all" || teacher.departmentName === replaceSupervisorDepartment)
+                )
+                .filter((teacher) =>
+                  replaceSupervisorSearch.trim() === ""
+                    ? true
+                    : teacher.name.toLowerCase().includes(replaceSupervisorSearch.toLowerCase()) ||
+                      teacher.email.toLowerCase().includes(replaceSupervisorSearch.toLowerCase())
+                )
+                .map((teacher) => (
+                  <div
+                    key={teacher.id}
+                    className="flex items-center justify-between p-3 rounded-md border bg-white"
+                  >
+                    <div>
+                      <div className="font-medium">{teacher.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {teacher.departmentName}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedTeacher(teacher)}
+                      disabled={selectedTeacher?.id === teacher.id}
+                    >
+                      {selectedTeacher?.id === teacher.id ? (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                      ) : (
+                        "Select"
+                      )}
+                    </Button>
+                  </div>
+                ))}
+              {availableTeachers
+                .filter((teacher) =>
+                  teacherToReplace &&
+                  teacher.id !== teacherToReplace.id &&
+                  selectedExam &&
+                  selectedExam.supervisors &&
+                  !selectedExam.supervisors.some((s) => s.id === teacher.id) &&
+                  selectedExam &&
+                  canSupervise(teacher, selectedExam) &&
+                  (replaceSupervisorDepartment === "all" || teacher.departmentName === replaceSupervisorDepartment)
+                )
+                .filter((teacher) =>
+                  replaceSupervisorSearch.trim() === ""
+                    ? true
+                    : teacher.name.toLowerCase().includes(replaceSupervisorSearch.toLowerCase()) ||
+                      teacher.email.toLowerCase().includes(replaceSupervisorSearch.toLowerCase())
+                ).length === 0 && (
+                <div className="text-center text-muted-foreground py-4">
+                  No available teachers for this time.
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setReplacementModalOpen(false)}>
