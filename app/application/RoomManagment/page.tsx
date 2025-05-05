@@ -20,6 +20,14 @@ import { toast } from "@/components/ui/use-toast"
 import { AlertCircle, Calendar, CheckCircle, Plus, Search, X } from "lucide-react"
 import type { Room, Exam, Niveau } from "@/app/interfaces"
 
+const pastelColors = [
+  "rgba(227, 247, 255)",
+  "rgba(254, 243, 199)",
+  "rgba(236, 234, 254)",
+  "rgba(253, 226, 243)",
+  "rgba(223, 246, 255)",
+]
+
 // Authentication utility functions
 const getAuthToken = () => localStorage.getItem("jwtToken") || ""
 
@@ -39,6 +47,7 @@ export default function RoomManagement() {
   const [filterCapacity, setFilterCapacity] = useState<string>("")
   const [filterNiveau, setFilterNiveau] = useState<string>("all")
   const [filterPeriod, setFilterPeriod] = useState<string>("all")
+  const [filterYear, setFilterYear] = useState<string>("all") // Add year filter
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null)
   const [reservationDate, setReservationDate] = useState<string>("")
@@ -73,13 +82,13 @@ export default function RoomManagement() {
         const examsData = await examsResponse.json()
         const niveauxData = await niveauxResponse.json()
 
-        // Check if roomsData is an array, if not, extract the array from the response
-        const roomsArray = Array.isArray(roomsData)
-          ? roomsData
-          : roomsData.rooms
-            ? roomsData.rooms
-            : roomsData.data
-              ? roomsData.data
+        // Fix: Always extract array from .data if present, fallback to root array
+        const roomsArray = Array.isArray(roomsData.data)
+          ? roomsData.data
+          : Array.isArray(roomsData)
+            ? roomsData
+            : roomsData.rooms
+              ? roomsData.rooms
               : []
 
         // Similarly for exams
@@ -231,6 +240,13 @@ export default function RoomManagement() {
       ? [...new Set(exams.filter((exam) => exam.period).map((exam) => exam.period))]
       : []
 
+  // Get unique years from exams for the year filter
+  const CURRENT_YEAR = new Date().getFullYear()
+  const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => {
+    const year = CURRENT_YEAR - 2 + i
+    return `${year}-${year + 1}`
+  })
+
   // Function to get level name by ID
   const getLevelNameById = (levelId: number | null | string): string => {
     if (!levelId) return ""
@@ -240,6 +256,13 @@ export default function RoomManagement() {
 
     const level = niveaux.find((n) => n.name.toString() === levelIdStr)
     return level ? level.name : ""
+  }
+
+  // Function to get room name by ID
+  const getRoomNameById = (roomId: number | null | undefined): string => {
+    if (!roomId) return "Not assigned"
+    const room = rooms.find((r) => r.id === roomId)
+    return room ? room.name : "Not assigned"
   }
 
   // Filter rooms based on search term and filters
@@ -261,25 +284,22 @@ export default function RoomManagement() {
         })
       : []
 
-  // Filter exams based on level and search term
+  // Filter exams for reservations tab (remove level filter, add year filter, and proper search)
   const filteredExams =
     exams && Array.isArray(exams)
       ? exams.filter((exam) => {
-          // Check if exam matches level filter
-          const matchesLevel =
-            !filterNiveau || filterNiveau === "all" ? true : exam.niveau?.toString() === filterNiveau
-
-          // Check if exam matches period filter
+          // Filter by period
           const matchesPeriod = !filterPeriod || filterPeriod === "all" ? true : exam.period === filterPeriod
-
-          // Check if exam matches search term
-          const matchesSearch = !searchTerm ? true : exam.subject.toLowerCase().includes(searchTerm.toLowerCase())
-
-          console.log(
-            `Exam ${exam.id} - Level ID: ${exam.niveau}, Period: ${exam.period}, Filter Level: ${filterNiveau}, Filter Period: ${filterPeriod}, Matches: ${matchesLevel && matchesPeriod && matchesSearch}`,
-          )
-
-          return matchesLevel && matchesPeriod && matchesSearch
+          // Filter by year
+          const matchesYear = filterYear === "all" ? true : exam.year === filterYear || exam.academicYear === filterYear
+          // Filter by search term (subject or room name)
+          const matchesSearch =
+            !searchTerm
+              ? true
+              : exam.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (exam.room && exam.room.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (exam.room_id && getRoomNameById(exam.room_id).toLowerCase().includes(searchTerm.toLowerCase()))
+          return matchesPeriod && matchesYear && matchesSearch
         })
       : []
 
@@ -330,41 +350,29 @@ export default function RoomManagement() {
     }
 
     try {
-      console.log("Making reservation...", {
-        room: selectedRoom,
-        exam: selectedExam,
-        date: reservationDate,
-        time: reservationStartTime,
-        duration: reservationDuration,
-      })
-
-      // Calculate end time
+      // Compose startDate and endDate in "YYYY-MM-DD HH:mm" format
       const startDateTime = new Date(`${reservationDate}T${reservationStartTime}:00`)
       const endDateTime = new Date(startDateTime.getTime() + reservationDuration * 60000)
-      const endTimeString = endDateTime.toISOString().replace("T", " ").substring(0, 19)
-      const startTimeString = startDateTime.toISOString().replace("T", " ").substring(0, 19)
+      const pad = (n: number) => n.toString().padStart(2, "0")
+      const formatDate = (d: Date) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 
-      // Create the updated exam data
-      const updatedExam = {
-        ...selectedExam,
-        room: selectedRoom.id.toString(),
-        room_id: selectedRoom.id,
-        date: startTimeString,
-        start_time: startTimeString,
-        debut: startTimeString,
-        end_time: endTimeString,
-        fin: endTimeString,
+      const startDateStr = formatDate(startDateTime)
+      const endDateStr = formatDate(endDateTime)
+
+      // Prepare request body as per backend contract
+      const requestBody = {
+        subject: selectedExam.subject,
+        startDate: startDateStr,
+        endDate: endDateStr,
         duration: reservationDuration,
-        duree: reservationDuration,
+        roomId: selectedRoom.id,
       }
 
-      console.log("Updated exam data:", updatedExam)
-
-      // Send the update to the API
       const response = await fetch(`http://localhost:8080/admin/exams/${selectedExam.id}`, {
         method: "PUT",
         headers: getHeaders(),
-        body: JSON.stringify(updatedExam),
+        body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {
@@ -373,10 +381,19 @@ export default function RoomManagement() {
         throw new Error(`Failed to update exam: ${response.status} ${response.statusText}`)
       }
 
-      // Update the local state
+      // Parse the response and update local state with the returned exam data
+      const responseData = await response.json()
+      const updatedExamData = responseData.data
+
+      // Defensive: If no room in response, treat as not assigned
       const updatedExams = exams.map((exam) => {
         if (exam.id === selectedExam.id) {
-          return updatedExam
+          return {
+            ...exam,
+            ...updatedExamData,
+            room: updatedExamData.room ? updatedExamData.room.name : undefined,
+            room_id: updatedExamData.room ? updatedExamData.room.id : undefined,
+          }
         }
         return exam
       })
@@ -509,13 +526,6 @@ export default function RoomManagement() {
     }
   }
 
-  // Function to get room name by ID
-  const getRoomNameById = (roomId: number | null): string => {
-    if (!roomId) return "Not assigned"
-    const room = rooms.find((r) => r.id === roomId)
-    return room ? room.name : roomId.toString()
-  }
-
   // Get filtered exams for a specific room based on the current period filter
   const getFilteredRoomExams = (roomId: number) => {
     return exams.filter((exam) => {
@@ -597,12 +607,26 @@ export default function RoomManagement() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredRooms.map((room) => {
+                  {filteredRooms.map((room, index) => {
                     // Get exams scheduled in this room, filtered by period
                     const roomExams = getFilteredRoomExams(room.id)
 
                     return (
-                      <Card key={room.id} className="overflow-hidden">
+                      <div
+                        key={room.id}
+                        className="overflow-hidden rounded-lg transition-colors duration-150 border border-gray-200"
+                        style={
+                          {
+                            "--hover-color": pastelColors[index % pastelColors.length],
+                          } as React.CSSProperties
+                        }
+                        onMouseEnter={e => {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = "var(--hover-color)";
+                        }}
+                        onMouseLeave={e => {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = "";
+                        }}
+                      >
                         <CardHeader className="pb-2">
                           <CardTitle className="text-xl">{room.name}</CardTitle>
                           <CardDescription>{room.location}</CardDescription>
@@ -649,7 +673,7 @@ export default function RoomManagement() {
                             Reserve
                           </Button>
                         </CardContent>
-                      </Card>
+                      </div>
                     )
                   })}
                 </div>
@@ -667,25 +691,12 @@ export default function RoomManagement() {
                 <div className="relative flex-1">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search for an exam..."
+                    placeholder="Search for an exam or room..."
                     className="pl-8"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
-                <Select value={filterNiveau} onValueChange={setFilterNiveau}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filter by level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All levels</SelectItem>
-                    {niveaux.map((niveau) => (
-                      <SelectItem key={niveau.id} value={niveau.name}>
-                        {niveau.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 <Select value={filterPeriod} onValueChange={setFilterPeriod}>
                   <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Filter by period" />
@@ -695,6 +706,19 @@ export default function RoomManagement() {
                     {periods.map((period) => (
                       <SelectItem key={period} value={period}>
                         {period}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filterYear} onValueChange={setFilterYear}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All years</SelectItem>
+                    {YEAR_OPTIONS.map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -728,10 +752,24 @@ export default function RoomManagement() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredExams.map((exam) => {
+                        filteredExams.map((exam, index) => {
                           const levelName = getLevelNameById(exam.niveau)
                           return (
-                            <TableRow key={exam.id}>
+                            <TableRow
+                              key={exam.id}
+                              className="group transition-colors duration-150"
+                              style={
+                                {
+                                  "--hover-color": pastelColors[index % pastelColors.length],
+                                } as React.CSSProperties
+                              }
+                              onMouseEnter={e => {
+                                (e.currentTarget as HTMLElement).style.backgroundColor = "var(--hover-color)";
+                              }}
+                              onMouseLeave={e => {
+                                (e.currentTarget as HTMLElement).style.backgroundColor = "";
+                              }}
+                            >
                               <TableCell className="font-medium">{exam.subject}</TableCell>
                               <TableCell>
                                 {levelName ? (
@@ -745,7 +783,7 @@ export default function RoomManagement() {
                               <TableCell>{exam.date ? formatDate(exam.date) : "Not scheduled"}</TableCell>
                               <TableCell>{exam.duration} min</TableCell>
                               <TableCell>
-                                {exam.room_id ? (
+                                {exam.room_id && getRoomNameById(exam.room_id) !== "Not assigned" ? (
                                   <Badge variant="outline" className="text-green-500 border-green-200 bg-green-50">
                                     {getRoomNameById(exam.room_id)}
                                   </Badge>
@@ -781,8 +819,6 @@ export default function RoomManagement() {
                                     onClick={() => {
                                       setSelectedExam(exam)
                                       setReservationDialogOpen(true)
-
-                                      // If exam already has a date, use it to pre-fill the form
                                       if (exam.date) {
                                         try {
                                           let date
@@ -793,7 +829,6 @@ export default function RoomManagement() {
                                           } else {
                                             date = new Date(exam.date)
                                           }
-
                                           if (!isNaN(date.getTime())) {
                                             setReservationDate(date.toISOString().split("T")[0])
                                             setReservationStartTime(
@@ -802,14 +837,11 @@ export default function RoomManagement() {
                                             setReservationDuration(exam.duration)
                                           }
                                         } catch (error) {
-                                          console.error("Error converting date:", exam.date, error)
-                                          // In case of error, initialize with today's date
                                           const today = new Date()
                                           setReservationDate(today.toISOString().split("T")[0])
                                           setReservationStartTime("08:00")
                                         }
                                       } else {
-                                        // If exam has no date, initialize with today's date
                                         const today = new Date()
                                         setReservationDate(today.toISOString().split("T")[0])
                                         setReservationStartTime("08:00")

@@ -27,6 +27,7 @@ export interface Exam {
   supervisors : Teacher[]
   niveau_id: any
   niveau : string
+  year: string
 }
 
 export interface Department {

@@ -72,7 +72,12 @@ export function AddStudentPopup({ onAdd }: AddStudentPopupProps) {
             throw new Error("Invalid response format");
           }
 
-          setNiveauList(jsonResponse.data);
+          // Remove duplicates by name
+          const uniqueNiveauxMap = new Map<string, Niveau>();
+          jsonResponse.data.forEach((niveau: Niveau) => {
+            uniqueNiveauxMap.set(niveau.name, niveau);
+          });
+          setNiveauList(Array.from(uniqueNiveauxMap.values()));
         } catch (error) {
           console.error("Error fetching grade levels:", error);
           setNiveauList([]); // Prevent `.map()` errors

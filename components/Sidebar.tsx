@@ -60,25 +60,25 @@ const navItems: NavItem[] = [
     icon: FileText,
     label: "Grades",
     href: "/application/niveaux",
-    color: "bg-pastel-green",
+    color: "bg-pastel-Blue",
   },
   {
     icon: BookOpen,
     label: "Rooms",
     href: "/application/rooms",
-    color: "bg-pastel-orange",
+    color: "bg-pastel-yellow",
   },
   {
     icon: ClipboardCheck, // Nouvel élément pour Exam Management
     label: "Exam Management",
     href: "/application/RoomManagment", // Même URL que Rooms puisque ça doit accéder à RoomManagement
-    color: "bg-pastel-red", // Vous pouvez choisir une autre couleur
+    color: "bg-pastel-purple", // Vous pouvez choisir une autre couleur
   },
   {
     icon: ClipboardList, // Nouvelle icône pour Supervisor Assignment
     label: "Supervisor Assignment",
     href: "/application/supervisor-assignment",
-    color: "bg-pastel-teal",
+    color: "bg-pastel-paleBlue",
   },
 ];
 
